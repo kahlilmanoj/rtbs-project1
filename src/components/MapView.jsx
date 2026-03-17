@@ -26,7 +26,7 @@ const MAP_OPTIONS = {
   ],
 };
 
-const BUS_ICON_URL = '/ksrtc-bus-model-3d-model-50fa7de9c9-removebg-preview.png';
+const BUS_ICON_URL = '/busicon.png';
 
 function calcBearing(from, to) {
   const r  = Math.PI / 180;
@@ -158,32 +158,32 @@ function MapContent({ busLocation, routeStops, routeId, encodedPolyline, routePa
     trafficRef.current = new G.TrafficLayer();
     trafficRef.current.setMap(map);
 
-    // Remaining route — KSRTC red (full width)
+    // Remaining route — TCE blue (full width)
     remainPolyRef.current = new G.Polyline({
       map,
       path:          [],
-      strokeColor:   '#c0392b',
-      strokeOpacity: 0.92,
+      strokeColor:   '#77dbf5',
+      strokeOpacity: 0.95,
       strokeWeight:  7,
       zIndex:        3,
     });
 
-    // Covered — muted red border (same weight as remaining)
+    // Covered — green border (same weight as remaining)
     coveredBorderRef.current = new G.Polyline({
       map,
       path:          [],
-      strokeColor:   '#c0392b',
-      strokeOpacity: 0.45,
+      strokeColor:   '#4caf50',
+      strokeOpacity: 0.6,
       strokeWeight:  7,
       zIndex:        1,
     });
 
-    // Covered — KSRTC amber transparent fill on top (narrower = shows border)
+    // Covered — transparent center (narrower = exposes green border edges)
     coveredFillRef.current = new G.Polyline({
       map,
       path:          [],
-      strokeColor:   '#f9a825',
-      strokeOpacity: 0.55,
+      strokeColor:   '#ffffff',
+      strokeOpacity: 0.0,
       strokeWeight:  3,
       zIndex:        2,
     });

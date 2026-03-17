@@ -220,7 +220,7 @@ export default function DriverTrackingPage() {
 
       {/* Destination arrived banner */}
       {arrived && (
-        <div style={{ margin: '0 16px 4px', background: 'linear-gradient(135deg,#7b241c,#c0392b)', borderRadius: 12, padding: '16px 20px', textAlign: 'center', borderBottom: '3px solid #f9a825' }}>
+        <div style={{ margin: '0 16px 4px', background: 'linear-gradient(135deg,#0d5580,#1a7aa8)', borderRadius: 12, padding: '16px 20px', textAlign: 'center', borderBottom: '3px solid #fffdac' }}>
           <div style={{ fontSize: 32, marginBottom: 6 }}>🏁</div>
           <p style={{ fontWeight: 800, fontSize: 18, color: '#fff', marginBottom: 4 }}>Destination Arrived!</p>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>
@@ -252,11 +252,11 @@ export default function DriverTrackingPage() {
       {/* Fare & distance info */}
       {busData?.fare && (
         <div style={{ margin: '0 16px 12px', display: 'flex', gap: 8 }}>
-          <div style={{ flex: 1, background: '#2d1010', borderRadius: 8, padding: '10px 14px', textAlign: 'center' }}>
+          <div style={{ flex: 1, background: '#0d2a3d', borderRadius: 8, padding: '10px 14px', textAlign: 'center' }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: '#f9a825' }}>₹{busData.fare}</div>
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginTop: 2 }}>Fare</div>
           </div>
-          <div style={{ flex: 1, background: '#2d1010', borderRadius: 8, padding: '10px 14px', textAlign: 'center' }}>
+          <div style={{ flex: 1, background: '#0d2a3d', borderRadius: 8, padding: '10px 14px', textAlign: 'center' }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: '#f9a825' }}>{busData.distance} km</div>
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginTop: 2 }}>Total Route</div>
           </div>
@@ -289,7 +289,7 @@ export default function DriverTrackingPage() {
       )}
 
       {/* Route stop list */}
-      <div style={{ padding: '16px', margin: '0 16px', background: '#2d1010', borderRadius: 10, marginTop: 12 }}>
+      <div style={{ padding: '16px', margin: '0 16px', background: '#0d2a3d', borderRadius: 10, marginTop: 12 }}>
         <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
           Route Progress ({routeIndexRef.current + 1}/{stops.length} stops)
         </p>
@@ -341,7 +341,8 @@ export default function DriverTrackingPage() {
           </button>
         ) : (
           <button
-            className="btn btn-danger"
+            className="btn"
+            style={{ background: '#0d98c8', color: '#fff', fontWeight: 700 }}
             onClick={handleStopTrip}
             disabled={stopping}
           >

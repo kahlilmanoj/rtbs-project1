@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getDocs, collection, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
-import { ensureDemoData, seedDemoData, getTripHistory, clearRoutePolylineCache, addCustomRoute, removeBus } from '../services/busService';
+import { ensureDemoData, seedDemoData, getTripHistory, clearTripHistory, clearRoutePolylineCache, addCustomRoute, removeBus } from '../services/busService';
 import { STOP_DB } from '../data/busStops';
 
 // Flat searchable list: base stops + every variant as a separate entry
@@ -37,6 +37,8 @@ export default function DriverDashboard() {
   // ── History state ──
   const [history, setHistory]         = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [clearingHistory, setClearingHistory] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [seedMsg, setSeedMsg] = useState('');
   const [cacheMsg, setCacheMsg] = useState('');
@@ -57,7 +59,7 @@ export default function DriverDashboard() {
   };
 
   // ── Add Route state ──
-  const EMPTY_FORM = { busNumber: '', routeName: '', busType: 'City Shuttle', fare: '', distance: '', duration: '', schedule: '06:00 AM' };
+  const EMPTY_FORM = { busNumber: '', routeName: '', busType: 'College Bus', fare: '', distance: '', duration: '', schedule: '07:30 AM' };
   const [form,           setForm]           = useState(EMPTY_FORM);
   const [selectedStops,  setSelectedStops]  = useState([]);
   const [stopSearch,     setStopSearch]     = useState('');
@@ -227,7 +229,18 @@ export default function DriverDashboard() {
 
     return (
       <div style={{ paddingTop: 24 }}>
-        <h2 className="section-title">Trip History</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <h2 className="section-title" style={{ marginBottom: 0 }}>Trip History</h2>
+          {history.length > 0 && (
+            <button
+              disabled={clearingHistory}
+              onClick={() => setShowClearConfirm(true)}
+              style={{ background: '#d32f2f', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: clearingHistory ? 0.6 : 1 }}
+            >
+              {clearingHistory ? 'Clearing…' : 'Clear All'}
+            </button>
+          )}
+        </div>
         <p className="text-sm text-muted mb-16">
           All completed trips for <strong>{user?.email}</strong>
         </p>
@@ -371,7 +384,7 @@ export default function DriverDashboard() {
 
         <div className="info-row">
           <span className="info-label">Role</span>
-          <span className="badge" style={{ background: '#fce4e4', color: '#c0392b' }}>Driver</span>
+          <span className="badge" style={{ background: '#d0f0fb', color: '#0d5580' }}>Driver</span>
         </div>
         <div className="info-row">
           <span className="info-label">Name</span>
@@ -448,7 +461,7 @@ export default function DriverDashboard() {
       <div className="card" style={{ marginBottom: 16 }}>
         <p className="input-label mb-8">Demo Data</p>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
-          Re-seed Firestore with the latest KSRTC route &amp; bus data.
+          Re-seed Firestore with the latest TCE Madurai college bus data.
         </p>
         {seedMsg ? (
           <p style={{ fontSize: 13, color: seedMsg.startsWith('✅') ? '#2e7d32' : '#c62828', marginBottom: 8 }}>
@@ -567,8 +580,8 @@ export default function DriverDashboard() {
         {/* Bus details */}
         <div className="card" style={{ marginBottom: 16 }}>
           <p className="input-label mb-12">Bus Details</p>
-          {field('Bus Number', 'busNumber', { placeholder: 'e.g. MY-1' })}
-          {field('Route Name', 'routeName', { placeholder: 'e.g. City Shuttle - Thampanoor to Vattiyoorkavu' })}
+          {field('Bus Number', 'busNumber', { placeholder: 'e.g. BUS-6' })}
+          {field('Route Name', 'routeName', { placeholder: 'e.g. Palanganatham to TCE' })}
 
           <div style={{ marginBottom: 12 }}>
             <label className="input-label">Bus Type</label>
@@ -577,7 +590,7 @@ export default function DriverDashboard() {
               value={form.busType}
               onChange={(e) => setForm((f) => ({ ...f, busType: e.target.value }))}
             >
-              {['City Circular (AC/Non-AC)', 'City Shuttle', 'City Radial', 'Express', 'Super Fast'].map((t) => (
+              {['College Bus', 'Staff Bus', 'Express', 'Mini Bus'].map((t) => (
                 <option key={t}>{t}</option>
               ))}
             </select>
@@ -610,7 +623,7 @@ export default function DriverDashboard() {
           <div style={{ position: 'relative', marginBottom: 12 }}>
             <input
               className="input-field"
-              placeholder="Search stop — e.g. Palayam, Kowdiar…"
+              placeholder="Search stop — e.g. Mattuthavani, Palanganatham…"
               value={stopSearch}
               onChange={(e) => setStopSearch(e.target.value)}
               style={{ marginBottom: 0 }}
@@ -641,7 +654,7 @@ export default function DriverDashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {selectedStops.map((stop, i) => (
                 <div key={`${stop.id}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 10px' }}>
-                  <span style={{ width: 22, height: 22, borderRadius: '50%', background: i === 0 ? '#2e7d32' : i === selectedStops.length - 1 ? '#7b0000' : 'var(--primary)', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ width: 22, height: 22, borderRadius: '50%', background: i === 0 ? '#2e7d32' : i === selectedStops.length - 1 ? '#0d5580' : 'var(--primary)', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     {i + 1}
                   </span>
                   <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{stop.name}</span>
@@ -677,22 +690,59 @@ export default function DriverDashboard() {
 
   return (
     <div className="page">
+
+      {/* Clear History Confirm Modal */}
+      {showClearConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 320, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.25)' }}>
+            <h3 style={{ fontSize: 17, fontWeight: 800, color: '#1a2a3a', marginBottom: 10 }}>Clear Trip History?</h3>
+            <p style={{ fontSize: 14, color: '#4a6a7a', lineHeight: 1.5, marginBottom: 24 }}>
+              All trip records will be permanently deleted. This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '1.5px solid #b8e4f5', background: '#fff', color: '#1a2a3a', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={clearingHistory}
+                onClick={async () => {
+                  setClearingHistory(true);
+                  try {
+                    await clearTripHistory(user.email);
+                    setHistory([]);
+                  } finally {
+                    setClearingHistory(false);
+                    setShowClearConfirm(false);
+                  }
+                }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: '#d32f2f', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: clearingHistory ? 0.6 : 1 }}
+              >
+                {clearingHistory ? 'Deleting…' : 'Delete All'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="app-header">
         <div className="header-title">
-          <span>🚌</span>
+          <img src="/logo.png" alt="" style={{ width: 26, height: 26, objectFit: 'contain' }} />
           <span>Driver Mode</span>
         </div>
         <div className="header-actions">
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
+          <span style={{ fontSize: 12, color: '#1a2a3a', fontWeight: 500, opacity: 0.7 }}>
             {user?.email?.split('@')[0]}
           </span>
           <button
             onClick={handleLogout}
-            style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, borderRadius: 6, padding: '4px 10px', cursor: 'pointer', marginLeft: 8 }}
-            aria-label="Sign out"
+            style={{ background: '#d32f2f', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, borderRadius: 6, padding: '5px 12px', cursor: 'pointer', marginLeft: 8 }}
+            aria-label="Logout"
           >
-            Sign Out
+            Logout
           </button>
         </div>
       </header>

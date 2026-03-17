@@ -13,13 +13,26 @@ export default function SplashPage() {
   }, [navigate]);
 
   return (
-    <div className="splash-page">
-      <div className="splash-logo">🚌</div>
-      <h1 className="splash-title">KSRTC</h1>
-      <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: 3, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', marginTop: -4 }}>
-        Kerala State Road Transport
-      </p>
-      <p className="splash-subtitle">Real-Time Bus Tracking System</p>
+    <div className="splash-page" style={{
+      backgroundImage: "url('/college pic.jpg')",
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }}>
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(160deg, rgba(13,85,128,0.82) 0%, rgba(7,42,69,0.9) 100%)',
+        zIndex: 0,
+      }} />
+      <img
+        src="/logo.png"
+        alt="TCE Logo"
+        className="splash-logo"
+        style={{ width: 110, height: 110, objectFit: 'contain', fontSize: 'unset' }}
+      />
+      <h1 className="splash-title" style={{ fontSize: 18, letterSpacing: 2, textAlign: 'center', maxWidth: 280, lineHeight: 1.3 }}>
+        Thiagarajar College of Engineering
+      </h1>
+      <p className="splash-subtitle">Bus Tracking System</p>
       <div className="loading-dots">
         <span />
         <span />

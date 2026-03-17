@@ -3,56 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ensureDemoData } from '../services/busService';
 
-// Routes shown in the Routes tab (mirrors seeded Firestore KSRTC TVM city data)
+// Routes shown in the Routes tab (mirrors seeded Firestore TCE Madurai data)
 const ALL_ROUTES = [
-  { id:'route-CC-1',  name:'City Circular - Thampanoor to Technopark',
-    stops:['Thampanoor','Palayam','Vellayambalam','Kowdiar','Pattom','Medical College','Ulloor','Sreekaryam','Kazhakuttam','Technopark Phase 1','Technopark Phase 3'],
-    buses:['CC-1'],  type:'City Circular (AC/Non-AC)', fare:30,  distance:'18.2 km', duration:'55 min' },
-  { id:'route-CC-2',  name:'City Circular - Thampanoor to Kazhakuttam via East Fort',
-    stops:['Thampanoor','East Fort','Pettah','Chakkai','Mukkola','Enchakkal','Karyavattom','Kazhakuttam','Technopark'],
-    buses:['CC-2'],  type:'City Circular (AC/Non-AC)', fare:25,  distance:'14.6 km', duration:'50 min' },
-  { id:'route-CS-1',  name:'City Shuttle - Thampanoor to Neyyattinkara',
-    stops:['Thampanoor','Karamana','Pappanamcode','Nemom','Kalliyoor','Aruvikkara','Balaramapuram','Avanavanchery','Parasuvaikkal','Neyyattinkara'],
-    buses:['CS-1'],  type:'City Shuttle', fare:40,  distance:'26.3 km', duration:'75 min' },
-  { id:'route-CS-2',  name:'City Shuttle - Thampanoor to Attingal',
-    stops:['Thampanoor','Palayam','Medical College','Sreekaryam','Kazhakuttam','Chanthavila','Chirayinkeezhu','Kallambalam','Attingal Junction','Attingal'],
-    buses:['CS-2'],  type:'City Shuttle', fare:50,  distance:'34.8 km', duration:'90 min' },
-  { id:'route-CS-3',  name:'City Shuttle - Thampanoor to Venjaramoodu',
-    stops:['Thampanoor','Palayam','Vellayambalam','Peroorkada','Vattiyoorkavu','Karickom','Vembayam','Aryanad','Venjaramoodu'],
-    buses:['CS-3'],  type:'City Shuttle', fare:40,  distance:'22.0 km', duration:'65 min' },
-  { id:'route-CS-4',  name:'City Shuttle - Thampanoor to Nedumangadu',
-    stops:['Thampanoor','Vellayambalam','Peroorkada','Vattiyoorkavu','Karickom','Vembayam','Aryanad','Pothencode','Nedumangadu'],
-    buses:['CS-4'],  type:'City Shuttle', fare:40,  distance:'25.2 km', duration:'72 min' },
-  { id:'route-CS-5',  name:'City Shuttle - Thampanoor to Kattakkada',
-    stops:['Thampanoor','Karamana','Nemom','Kalliyoor','Maranalloor','Vellarada','Peringamala','Kattakkada'],
-    buses:['CS-5'],  type:'City Shuttle', fare:40,  distance:'22.5 km', duration:'65 min' },
-  { id:'route-CS-6',  name:'City Shuttle - Thampanoor to Kovalam',
-    stops:['Thampanoor','East Fort','Pappanamcode','Nemom','Poovar Road','Vizhinjam','Kovalam Junction','Kovalam'],
-    buses:['CS-6'],  type:'City Shuttle', fare:30,  distance:'16.2 km', duration:'50 min' },
-  { id:'route-CS-7',  name:'City Shuttle - Thampanoor to Kaniyapuram',
-    stops:['Thampanoor','Palayam','Kowdiar','Pattom','Medical College','Ulloor','Sreekaryam','Kazhakuttam','Mangalapuram','Kaniyapuram'],
-    buses:['CS-7'],  type:'City Shuttle', fare:35,  distance:'21.2 km', duration:'60 min' },
-  { id:'route-CS-8',  name:'City Shuttle - Thampanoor to Vizhinjam',
-    stops:['Thampanoor','East Fort','Pappanamcode','Nemom','Poovar Road','Veli','Vizhinjam'],
-    buses:['CS-8'],  type:'City Shuttle', fare:25,  distance:'12.0 km', duration:'40 min' },
-  { id:'route-CS-9',  name:'City Shuttle - Thampanoor to Varkala',
-    stops:['Thampanoor','Sreekaryam','Kazhakuttam','Chirayinkeezhu','Attingal','Parippally','Manamboor','Edava','Varkala Town','Varkala'],
-    buses:['CS-9'],  type:'City Shuttle', fare:70,  distance:'52.0 km', duration:'130 min' },
-  { id:'route-CS-10', name:'City Shuttle - Thampanoor to Pongummoodu (via Kowdiar)',
-    stops:['Thampanoor','Museum','Palayam','Vellayambalam','Kowdiar','Jagathy','Pongummoodu'],
-    buses:['CS-10'], type:'City Shuttle', fare:15,  distance:'4.8 km',  duration:'22 min' },
-  { id:'route-CR-1',  name:'City Radial - Thampanoor to Peroorkada',
-    stops:['Thampanoor','Aristo','Palayam','Vellayambalam','PMG','Vikas Bhavan','Peroorkada'],
-    buses:['CR-1'],  type:'City Radial', fare:20,  distance:'8.8 km',  duration:'35 min' },
-  { id:'route-CR-2',  name:'City Radial - Thampanoor to Sreekaryam',
-    stops:['Thampanoor','Palayam','Vellayambalam','Pattom','Medical College','Ulloor','Sreekaryam'],
-    buses:['CR-2'],  type:'City Radial', fare:25,  distance:'13.2 km', duration:'40 min' },
-  { id:'route-CR-3',  name:'City Radial - Thampanoor to Pappanamcode',
-    stops:['Thampanoor','East Fort','Chalai','Karamana','Pappanamcode'],
-    buses:['CR-3'],  type:'City Radial', fare:15,  distance:'5.2 km',  duration:'20 min' },
-  { id:'route-CR-4',  name:'City Radial - Thampanoor to Pongumoodu',
-    stops:['Thampanoor','Aristo','Palayam','Vellayambalam','Jagathy','Pongumoodu'],
-    buses:['CR-4'],  type:'City Radial', fare:15,  distance:'4.2 km',  duration:'18 min' },
+  { id:'route-BUS-1', name:'Bus 1 — Mattuthavani to TCE',
+    stops:['Mattuthavani','KK Nagar','Thallakulam','Goripalayam','Simmakkal','Sethupathi Higher Secondary School','Periyar Bus Stand','Madura College','Palanganatham','Pykara','Pasumalai','Thiagarajar College of Engineering'],
+    buses:['BUS-1'], type:'College Bus', fare:45, distance:'14.2 km', duration:'45 min' },
+  { id:'route-BUS-2', name:'Bus 2 — Karuppayurani to TCE (Route A)',
+    stops:['Karuppayurani','Melamadai','Paalpannai','Anna Bus Stand','Goripalayam','Kelavasal','Therukuvasal','Madura College','Vasantha Nagar','Palanganatham','Alagappan Nagar','Moolakarai','Thiagarajar College of Engineering'],
+    buses:['BUS-2'], type:'College Bus', fare:35, distance:'16.8 km', duration:'52 min' },
+  { id:'route-BUS-3', name:'Bus 3 — Karuppayurani to TCE (via Simmakkal)',
+    stops:['Karuppayurani','Melamadai','Paalpannai','Anna Bus Stand','Goripalayam','Simmakkal','Sethupathi School','Periyar Bus Stand','Vasantha Nagar','Palanganatham','Alagappan Nagar','Moolakarai','Thiagarajar College of Engineering'],
+    buses:['BUS-3'], type:'College Bus', fare:65, distance:'17.1 km', duration:'53 min' },
+  { id:'route-BUS-4', name:'Bus 4 — Arapalayam to TCE',
+    stops:['Arapalayam','Guru Theatre','Kalavasal','KFC','Ponmeni','Vasantha Nagar','Palanganatham','Alagappan Nagar','Pykara','Pasumalai','Moolakarai','Thiagarajar College of Engineering'],
+    buses:['BUS-4'], type:'College Bus', fare:50, distance:'12.5 km', duration:'40 min' },
+  { id:'route-BUS-5', name:'Bus 5 — Park Town to TCE',
+    stops:['Park Town','Thabaal Thanthi Nagar','BB Kulam','Thamukkam','Goripalayam','Simmakkal','Sethupathi School','Periyar Bus Stand','Vasantha Nagar','Palanganatham','Alagappan Nagar','Moolakarai','Thiagarajar College of Engineering'],
+    buses:['BUS-5'], type:'College Bus', fare:30, distance:'18.0 km', duration:'57 min' },
 ];
 
 export default function PassengerHome() {
@@ -157,7 +124,7 @@ export default function PassengerHome() {
           id="from-stop"
           type="text"
           className="input-field"
-          placeholder="e.g. Thampanoor"
+          placeholder="e.g. Mattuthavani"
           value={fromStop}
           onChange={(e) => setFromStop(e.target.value)}
           required
@@ -181,7 +148,7 @@ export default function PassengerHome() {
           id="to-stop"
           type="text"
           className="input-field"
-          placeholder="e.g. Technopark"
+          placeholder="e.g. TCE"
           value={toStop}
           onChange={(e) => setToStop(e.target.value)}
           required
@@ -198,10 +165,10 @@ export default function PassengerHome() {
         <p className="input-label mb-8">Popular Routes</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
-            { from: 'Thampanoor', to: 'Technopark Phase 3' },
-            { from: 'Thampanoor', to: 'Kazhakuttam'        },
-            { from: 'Thampanoor', to: 'Attingal'           },
-            { from: 'Thampanoor', to: 'Neyyattinkara'      },
+            { from: 'Mattuthavani', to: 'TCE'         },
+            { from: 'Karuppayurani', to: 'TCE'        },
+            { from: 'Arapalayam', to: 'TCE'           },
+            { from: 'Park Town', to: 'TCE'            },
           ].map((route) => (
             <button
               key={`${route.from}-${route.to}`}
@@ -290,8 +257,8 @@ export default function PassengerHome() {
               <span
                 key={b}
                 style={{
-                  background: '#fce4e4',
-                  color: 'var(--primary)',
+                  background: '#d0f0fb',
+                  color: '#0d5580',
                   borderRadius: 6,
                   padding: '3px 10px',
                   fontSize: 13,
@@ -380,10 +347,16 @@ export default function PassengerHome() {
     </div>
   );
 
-  const pastTrips = (() => {
+  const [showClearTripsConfirm, setShowClearTripsConfirm] = useState(false);
+  const [pastTrips, setPastTrips] = useState(() => {
     try { return JSON.parse(localStorage.getItem('rtbs_past_trips') || '[]'); }
     catch { return []; }
-  })();
+  });
+
+  const clearPastTrips = () => {
+    localStorage.removeItem('rtbs_past_trips');
+    setPastTrips([]);
+  };
 
   const renderProfile = () => (
     <div style={{ paddingTop: 24 }}>
@@ -395,14 +368,14 @@ export default function PassengerHome() {
           width: 64,
           height: 64,
           borderRadius: '50%',
-          background: 'linear-gradient(135deg, var(--primary) 0%, #922b21 100%)',
+          background: 'linear-gradient(135deg, #0d98c8 0%, #0d5580 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: 22,
           fontWeight: 900,
           color: '#fff',
-          boxShadow: '0 4px 16px rgba(192,57,43,0.3)',
+          boxShadow: '0 4px 16px rgba(13,85,128,0.3)',
           flexShrink: 0,
         }}>
           {profile.name ? profile.name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2) : user?.email?.[0]?.toUpperCase() || '?'}
@@ -463,7 +436,17 @@ export default function PassengerHome() {
 
       {/* Past trips */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <p className="input-label mb-12">Past Trips</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <p className="input-label" style={{ marginBottom: 0 }}>Past Trips</p>
+          {pastTrips.length > 0 && (
+            <button
+              onClick={() => setShowClearTripsConfirm(true)}
+              style={{ background: '#d32f2f', color: '#fff', border: 'none', borderRadius: 8, padding: '4px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+            >
+              Clear All
+            </button>
+          )}
+        </div>
         {pastTrips.length === 0 ? (
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', padding: '8px 0' }}>
             No trips yet — track a bus to record your first trip.
@@ -478,7 +461,7 @@ export default function PassengerHome() {
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: '#fce4e4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🚌</div>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: '#d0f0fb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🚌</div>
                       <div>
                         <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Bus {trip.busNumber}</p>
                         <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>{date} · {time}</p>
@@ -505,11 +488,11 @@ export default function PassengerHome() {
       <div className="card" style={{ marginBottom: 16 }}>
         <p className="input-label mb-8">About</p>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-          KSRTC Real-Time Bus Tracking — track live bus locations, get accurate ETAs,
-          and browse all Thiruvananthapuram city routes.
+          TCE Real-Time Bus Tracking — track live bus locations, get accurate ETAs,
+          and browse all Madurai city routes.
         </p>
         <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 12 }}>
-          Version 1.0.0 · Kerala State Road Transport Corporation
+          Version 1.0.0 · Thiagarajar College of Engineering
         </p>
       </div>
 
@@ -525,22 +508,49 @@ export default function PassengerHome() {
 
   return (
     <div className="page">
+
+      {/* Clear Trips Confirm Modal */}
+      {showClearTripsConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 320, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.25)' }}>
+            <h3 style={{ fontSize: 17, fontWeight: 800, color: '#1a2a3a', marginBottom: 10 }}>Clear Past Trips?</h3>
+            <p style={{ fontSize: 14, color: '#4a6a7a', lineHeight: 1.5, marginBottom: 24 }}>
+              All your past trip records will be removed from this device.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setShowClearTripsConfirm(false)}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '1.5px solid #b8e4f5', background: '#fff', color: '#1a2a3a', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { clearPastTrips(); setShowClearTripsConfirm(false); }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: '#d32f2f', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+              >
+                Delete All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="app-header">
         <div className="header-title">
-          <span>🚌</span>
-          <span>KSRTC Tracker</span>
+          <img src="/logo.png" alt="" style={{ width: 26, height: 26, objectFit: 'contain' }} />
+          <span>TCE Bus Tracking</span>
         </div>
         <div className="header-actions">
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
+          <span style={{ fontSize: 12, color: '#1a2a3a', fontWeight: 500, opacity: 0.7 }}>
             {user?.email?.split('@')[0]}
           </span>
           <button
             onClick={handleLogout}
-            style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, borderRadius: 6, padding: '4px 10px', cursor: 'pointer', marginLeft: 8 }}
-            aria-label="Sign out"
+            style={{ background: '#d32f2f', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, borderRadius: 6, padding: '5px 12px', cursor: 'pointer', marginLeft: 8 }}
+            aria-label="Logout"
           >
-            Sign Out
+            Logout
           </button>
         </div>
       </header>

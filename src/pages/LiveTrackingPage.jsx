@@ -228,25 +228,25 @@ export default function LiveTrackingPage() {
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: i < routeData.stops.length - 1 ? 10 : 0, position: 'relative', zIndex: 1 }}>
                     {isCovered ? (
-                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#e8f5e9', border: '2px solid #4caf50', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'transparent', border: '2px solid #4caf50', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <span style={{ color: '#4caf50', fontSize: 10, fontWeight: 900, lineHeight: 1 }}>✓</span>
                       </div>
                     ) : isCurrent ? (
-                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#c0392b', flexShrink: 0 }} />
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#fffdac', flexShrink: 0 }} />
                     ) : isNext ? (
-                      <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2.5px solid #c0392b', background: '#fff', flexShrink: 0 }} />
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2.5px solid #77dbf5', background: '#fff', flexShrink: 0 }} />
                     ) : (
-                      <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid rgba(192,57,43,0.3)', background: '#fff', flexShrink: 0 }} />
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid rgba(119,219,245,0.4)', background: '#fff', flexShrink: 0 }} />
                     )}
                     <span style={{
                       fontSize: 13,
                       fontWeight: isCurrent ? 700 : isNext ? 600 : 400,
-                      color: isCovered ? 'var(--text-secondary)' : isCurrent ? '#c0392b' : isNext ? '#c0392b' : 'var(--text-secondary)',
+                      color: isCovered ? 'var(--text-secondary)' : isCurrent ? '#0d98c8' : isNext ? '#0d98c8' : 'var(--text-secondary)',
                       opacity: isCovered ? 0.6 : 1,
                     }}>
                       {stop.name}
-                      {isCurrent && <span style={{ marginLeft: 6, fontSize: 10, background: '#c0392b', color: '#fff', borderRadius: 3, padding: '1px 5px', fontWeight: 700 }}>NOW</span>}
-                      {isNext    && <span style={{ marginLeft: 6, fontSize: 10, color: '#c0392b', fontWeight: 600 }}>NEXT</span>}
+                      {isCurrent && <span style={{ marginLeft: 6, fontSize: 10, background: '#77dbf5', color: '#1a2a3a', borderRadius: 3, padding: '1px 5px', fontWeight: 700 }}>NOW</span>}
+                      {isNext    && <span style={{ marginLeft: 6, fontSize: 10, color: '#0d98c8', fontWeight: 600 }}>NEXT</span>}
                     </span>
                   </div>
                 );

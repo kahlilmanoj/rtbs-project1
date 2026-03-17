@@ -87,12 +87,11 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         {/* Logo */}
-        <div className="login-logo">{isDriver ? '🚌' : '🧍'}</div>
-        <h1 className="login-title">KSRTC</h1>
-        <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, letterSpacing: 2, color: 'var(--primary)', textTransform: 'uppercase', marginBottom: 2 }}>
-          Kerala State Road Transport
-        </p>
-        <p className="login-subtitle">Real-Time Bus Tracking System</p>
+        <div className="login-logo">
+          <img src="/logo.png" alt="TCE Logo" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+        </div>
+        <h1 className="login-title" style={{ fontSize: 15, letterSpacing: 1 }}>Thiagarajar College of Engineering</h1>
+        <p className="login-subtitle">Bus Tracking System</p>
 
         {/* Role Toggle */}
         <div className="role-toggle">
@@ -101,14 +100,16 @@ export default function LoginPage() {
             className={`role-btn ${!isDriver ? 'role-btn-active' : ''}`}
             onClick={() => switchRole('passenger')}
           >
-            🧍 Passenger
+            <img src="/logo.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', verticalAlign: 'middle', marginRight: 4 }} />
+            Passenger
           </button>
           <button
             type="button"
             className={`role-btn ${isDriver ? 'role-btn-active role-btn-driver' : ''}`}
             onClick={() => switchRole('driver')}
           >
-            🚌 Driver
+            <img src="/logo.png" alt="" style={{ width: 16, height: 16, objectFit: 'contain', verticalAlign: 'middle', marginRight: 4 }} />
+            Driver
           </button>
         </div>
 

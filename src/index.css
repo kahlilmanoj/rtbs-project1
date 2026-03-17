@@ -1,25 +1,25 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   KSRTC Kerala Brand Theme — Real-Time Bus Tracking System
-   Primary: KSRTC Red (#c0392b)  ·  Accent: KSRTC Amber (#f9a825)
+   Thiagarajar College of Engineering — Bus Tracking System
+   Primary: TCE Blue (#77dbf5)  ·  Accent: TCE Yellow (#fffdac)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── CSS Variables ─────────────────────────────────────────────────────────── */
 :root {
-  --primary:        #c0392b;   /* KSRTC Red */
-  --primary-dark:   #922b21;   /* Darker red — hover / pressed */
-  --primary-light:  #e74c3c;   /* Lighter red */
-  --accent:         #f9a825;   /* KSRTC Amber / Yellow */
-  --accent-dark:    #f57f17;   /* Darker amber */
-  --bg:             #fef9f8;   /* Warm off-white page background */
-  --surface:        #fff5f3;   /* Slightly warm surface layer */
+  --primary:        #77dbf5;   /* TCE Blue */
+  --primary-dark:   #4ac8ed;   /* Darker blue — hover / pressed */
+  --primary-light:  #a8e9f8;   /* Lighter blue */
+  --accent:         #fffdac;   /* TCE Yellow */
+  --accent-dark:    #e8e800;   /* Darker yellow */
+  --bg:             #f0faff;   /* Light blue-tinted background */
+  --surface:        #e4f4fc;   /* Surface layer */
   --card:           #ffffff;   /* Card / panel white */
-  --text:           #1a0505;   /* Deep warm near-black */
-  --text-secondary: #7a5252;   /* Muted warm brown */
-  --danger:         #7b0000;   /* Deep crimson — destructive actions */
+  --text:           #1a2a3a;   /* Dark navy */
+  --text-secondary: #4a6a7a;   /* Muted blue-gray */
+  --danger:         #d32f2f;   /* Red — destructive actions */
   --success:        #1b5e20;   /* Standard green — active / live */
-  --border:         #f0dede;   /* Warm light red-tinted border */
-  --shadow:         0 2px 14px rgba(192, 57, 43, 0.10);
-  --shadow-md:      0 4px 20px rgba(192, 57, 43, 0.15);
+  --border:         #b8e4f5;   /* Light blue border */
+  --shadow:         0 2px 14px rgba(30, 150, 200, 0.10);
+  --shadow-md:      0 4px 20px rgba(30, 150, 200, 0.15);
   --radius:         12px;
 }
 
@@ -122,25 +122,25 @@ button {
   transform: none;
 }
 
-/* Primary — KSRTC Red */
+/* Primary — TCE Blue */
 .btn-primary {
   background: var(--primary);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(192, 57, 43, 0.28);
+  color: #1a2a3a;
+  box-shadow: 0 2px 8px rgba(30, 150, 200, 0.28);
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--primary-dark);
-  box-shadow: 0 4px 12px rgba(192, 57, 43, 0.38);
+  box-shadow: 0 4px 12px rgba(30, 150, 200, 0.38);
 }
 
-/* Secondary — warm neutral */
+/* Secondary — cool neutral */
 .btn-secondary {
-  background: #f7eded;
-  color: var(--primary);
-  border: 1.5px solid #f0dede;
+  background: #e4f4fc;
+  color: var(--text);
+  border: 1.5px solid var(--border);
 }
 .btn-secondary:hover:not(:disabled) {
-  background: #f0dede;
+  background: #c8e8f5;
 }
 
 /* Danger — deep crimson */
@@ -163,24 +163,24 @@ button {
   background: #145218;
 }
 
-/* Accent — KSRTC Amber */
+/* Accent — TCE Yellow */
 .btn-accent {
   background: var(--accent);
-  color: #1a0505;
-  box-shadow: 0 2px 8px rgba(249, 168, 37, 0.3);
+  color: #1a2a3a;
+  box-shadow: 0 2px 8px rgba(220, 210, 0, 0.3);
 }
 .btn-accent:hover:not(:disabled) {
   background: var(--accent-dark);
 }
 
-/* Driver — same red family but slightly different shade */
+/* Driver — deeper blue */
 .btn-driver {
-  background: #a93226;
+  background: #0d98c8;
   color: #fff;
-  box-shadow: 0 2px 8px rgba(169, 50, 38, 0.3);
+  box-shadow: 0 2px 8px rgba(13, 152, 200, 0.3);
 }
 .btn-driver:hover:not(:disabled) {
-  background: #7b241c;
+  background: #0a7aaa;
 }
 
 .btn-sm {
@@ -203,11 +203,11 @@ button {
 
 .input-field:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.08);
+  box-shadow: 0 0 0 3px rgba(30, 150, 200, 0.12);
 }
 
 .input-field::placeholder {
-  color: #c9a7a7;
+  color: #8ec8e0;
 }
 
 .input-label {
@@ -237,8 +237,8 @@ button {
 }
 
 .badge-idle {
-  background: #fce4e4;
-  color: #922b21;
+  background: #ddf2fb;
+  color: #0a7aaa;
 }
 
 .badge-warning {
@@ -301,14 +301,14 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(160deg, #c0392b 0%, #7b241c 55%, #4a0f0f 100%);
+  background: linear-gradient(160deg, #1a7aa8 0%, #0d5580 55%, #072a45 100%);
   color: #fff;
   gap: 12px;
   position: relative;
   overflow: hidden;
 }
 
-/* Decorative yellow stripe — like KSRTC bus livery */
+/* Decorative yellow stripe — TCE accent */
 .splash-page::before {
   content: '';
   position: absolute;
@@ -316,7 +316,7 @@ button {
   top: 38%;
   height: 6px;
   background: var(--accent);
-  opacity: 0.55;
+  opacity: 0.7;
 }
 
 .splash-page::after {
@@ -326,7 +326,7 @@ button {
   top: calc(38% + 12px);
   height: 3px;
   background: var(--accent);
-  opacity: 0.3;
+  opacity: 0.4;
 }
 
 .splash-logo {
@@ -396,7 +396,7 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(160deg, #fef9f8 0%, #fce8e6 100%);
+  background: linear-gradient(160deg, #e4f4fc 0%, #c0e8f8 100%);
   padding: 24px;
 }
 
@@ -406,7 +406,7 @@ button {
   background: var(--card);
   border-radius: 16px;
   padding: 32px 28px;
-  box-shadow: 0 6px 32px rgba(192, 57, 43, 0.14);
+  box-shadow: 0 6px 32px rgba(30, 150, 200, 0.18);
   border-top: 5px solid var(--primary);
 }
 
@@ -434,7 +434,7 @@ button {
 }
 
 .error-message {
-  background: #fff0f0;
+  background: #ffeaea;
   color: var(--danger);
   border-radius: 8px;
   padding: 10px 14px;
@@ -469,7 +469,7 @@ button {
 /* ── Login Role Toggle ─────────────────────────────────────────────────────── */
 .role-toggle {
   display: flex;
-  background: #f7eded;
+  background: #e4f4fc;
   border-radius: 10px;
   padding: 4px;
   margin-bottom: 12px;
@@ -492,13 +492,14 @@ button {
 
 .role-btn-active {
   background: var(--primary);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(192, 57, 43, 0.3);
+  color: #1a2a3a;
+  box-shadow: 0 2px 8px rgba(30, 150, 200, 0.3);
 }
 
 .role-btn-driver.role-btn-active {
-  background: #a93226;
-  box-shadow: 0 2px 8px rgba(169, 50, 38, 0.35);
+  background: #0d98c8;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(13, 152, 200, 0.35);
 }
 
 .role-hint {
@@ -516,19 +517,19 @@ button {
 .app-header {
   width: 100%;
   background: var(--primary);
-  color: #fff;
+  color: #1a2a3a;
   padding: 0 16px;
   height: 58px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 3px 10px rgba(192, 57, 43, 0.3);
+  box-shadow: 0 3px 10px rgba(30, 150, 200, 0.25);
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
-/* KSRTC yellow accent stripe on header */
+/* TCE yellow accent stripe on header */
 .app-header::after {
   content: '';
   position: absolute;
@@ -555,9 +556,9 @@ button {
 }
 
 .icon-btn {
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(26, 42, 58, 0.2);
+  color: #1a2a3a;
   border-radius: 8px;
   padding: 6px 12px;
   font-size: 13px;
@@ -582,7 +583,7 @@ button {
   justify-content: space-around;
   padding: 8px 0 14px;
   z-index: 100;
-  box-shadow: 0 -3px 12px rgba(192, 57, 43, 0.08);
+  box-shadow: 0 -3px 12px rgba(30, 150, 200, 0.08);
 }
 
 .nav-item {
@@ -602,19 +603,19 @@ button {
 }
 
 .nav-item.active {
-  color: var(--primary);
+  color: #0d98c8;
   font-weight: 700;
-  background: rgba(192, 57, 43, 0.07);
+  background: rgba(30, 150, 200, 0.08);
   border-radius: 10px;
   box-shadow: inset 0 3px 0 var(--primary);
 }
 
 .nav-item.active .nav-icon {
-  filter: drop-shadow(0 1px 3px rgba(192, 57, 43, 0.3));
+  filter: drop-shadow(0 1px 3px rgba(30, 150, 200, 0.3));
 }
 
 .nav-item:hover {
-  background: #fce8e6;
+  background: #ddf2fb;
 }
 
 .nav-icon {
@@ -635,7 +636,7 @@ button {
 .map-placeholder {
   height: 400px;
   width: 100%;
-  background: #fce8e6;
+  background: #ddf2fb;
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;
@@ -662,7 +663,7 @@ button {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #fce8e6;
+  border-bottom: 1px solid var(--border);
 }
 
 .info-row:last-child {
@@ -742,17 +743,17 @@ button {
   background: var(--accent-dark);
 }
 
-/* ── Driver Tracking — dark maroon theme ──────────────────────────────────── */
+/* ── Driver Tracking — dark navy theme ──────────────────────────────────── */
 .tracking-page {
   min-height: 100vh;
-  background: #1c0808;   /* Deep KSRTC maroon */
+  background: #0a1e2d;   /* Deep TCE navy */
   color: #fff;
   display: flex;
   flex-direction: column;
 }
 
 .tracking-header {
-  background: linear-gradient(135deg, #7b241c 0%, #922b21 100%);
+  background: linear-gradient(135deg, #0d5580 0%, #1a7aa8 100%);
   padding: 16px;
   display: flex;
   align-items: center;
@@ -775,11 +776,11 @@ button {
 }
 
 .stat-card {
-  background: #2d1010;
+  background: #0d2a3d;
   border-radius: 10px;
   padding: 16px;
   text-align: center;
-  border-bottom: 3px solid rgba(249, 168, 37, 0.25);
+  border-bottom: 3px solid rgba(255, 253, 172, 0.25);
 }
 
 .stat-value {
@@ -821,12 +822,12 @@ button {
 }
 
 .coords-display {
-  background: #2d1010;
+  background: #0d2a3d;
   border-radius: 10px;
   padding: 16px;
   margin: 0 16px;
   font-size: 13px;
-  color: #ffccbc;    /* Warm peach — comfortable on dark maroon */
+  color: #b3e5fc;    /* Light blue — comfortable on dark navy */
   border-left: 3px solid var(--accent);
 }
 
@@ -863,7 +864,7 @@ button {
 
 .route-header {
   background: var(--primary);
-  color: #fff;
+  color: #1a2a3a;
   padding: 10px 14px;
   border-radius: 10px;
   margin-bottom: 16px;
@@ -937,7 +938,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  border-bottom: 2px solid rgba(192, 57, 43, 0.12);
+  border-bottom: 2px solid rgba(30, 150, 200, 0.12);
 }
 
 .trip-stat-value {
@@ -982,7 +983,7 @@ button {
 .tracking-info-panel {
   background: var(--card);
   padding: 16px;
-  box-shadow: 0 -3px 14px rgba(192, 57, 43, 0.08);
+  box-shadow: 0 -3px 14px rgba(30, 150, 200, 0.08);
   flex: 1;
   overflow-y: auto;
   min-height: 0;
@@ -1055,7 +1056,7 @@ button {
   border-radius: 8px;
   padding: 8px 10px;
   text-align: center;
-  border-bottom: 2px solid rgba(192, 57, 43, 0.1);
+  border-bottom: 2px solid rgba(30, 150, 200, 0.1);
 }
 
 .tracking-meta-label {
@@ -1165,7 +1166,7 @@ button {
   border-radius: 50%;
   background: var(--card);
   border: 1.5px solid var(--border);
-  color: var(--primary);
+  color: #0d98c8;
   font-size: 18px;
   cursor: pointer;
   margin: -2px auto;
@@ -1173,13 +1174,13 @@ button {
   position: relative;
   transition: background 0.2s, transform 0.25s, box-shadow 0.2s;
   flex-shrink: 0;
-  box-shadow: 0 1px 6px rgba(192, 57, 43, 0.12);
+  box-shadow: 0 1px 6px rgba(30, 150, 200, 0.12);
 }
 
 .swap-btn:hover {
-  background: #fce8e6;
+  background: #ddf2fb;
   transform: rotate(180deg);
-  box-shadow: 0 2px 8px rgba(192, 57, 43, 0.2);
+  box-shadow: 0 2px 8px rgba(30, 150, 200, 0.2);
 }
 
 /* ── Routes filter search bar ──────────────────────────────────────────────── */
@@ -1197,7 +1198,7 @@ button {
 
 .filter-bar:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.08);
+  box-shadow: 0 0 0 3px rgba(30, 150, 200, 0.12);
   outline: none;
 }
 
@@ -1236,7 +1237,7 @@ button {
 }
 
 .inline-banner-error {
-  background: #fff0f0;
+  background: #ffeaea;
   color: var(--danger);
   border-left: 3px solid var(--danger);
 }
@@ -1261,14 +1262,14 @@ button {
 
 /* ── Btn outline-secondary (non-alarming back/exit buttons) ────────────────── */
 .btn-back {
-  background: #f7eded;
+  background: #e4f4fc;
   color: var(--text-secondary);
   border: 1.5px solid var(--border);
   font-weight: 600;
 }
 
 .btn-back:hover:not(:disabled) {
-  background: #f0dede;
+  background: #c8e8f5;
   color: var(--text);
 }
 
@@ -1298,8 +1299,8 @@ button {
 }
 
 .route-chip:hover {
-  background: #f0dede;
-  border-color: rgba(192, 57, 43, 0.3);
+  background: #c8e8f5;
+  border-color: rgba(30, 150, 200, 0.3);
 }
 
 .route-chip-label {
@@ -1325,7 +1326,7 @@ button {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  scrollbar-color: rgba(249, 168, 37, 0.3) transparent;
+  scrollbar-color: rgba(255, 253, 172, 0.4) transparent;
 }
 
 .stop-list-scroll::-webkit-scrollbar {
@@ -1337,7 +1338,7 @@ button {
 }
 
 .stop-list-scroll::-webkit-scrollbar-thumb {
-  background: rgba(249, 168, 37, 0.35);
+  background: rgba(255, 253, 172, 0.45);
   border-radius: 4px;
 }
 
