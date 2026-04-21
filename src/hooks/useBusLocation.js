@@ -26,6 +26,7 @@ export function useBusLocation(busId) {
             speed: data.speed,
             timestamp: data.timestamp,
             tripStatus: data.tripStatus,
+            tripStartedAt: data.tripStartedAt,
           });
         } else {
           setLocation(null);

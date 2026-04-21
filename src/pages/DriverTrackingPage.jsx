@@ -5,14 +5,9 @@ import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { haversineDistance } from '../utils/etaCalculator';
 
-const UPDATE_INTERVAL_MS = 2000;  // fires every 2s; 3 steps = 6s per stop segment
-
-function randomSpeed(busType = '') {
-  // Faster speed for express/superfast routes
-  if (busType.toLowerCase().includes('super fast') || busType.toLowerCase().includes('express')) {
-    return Math.floor(55 + Math.random() * 25); // 55–79 km/h
-  }
-  return Math.floor(35 + Math.random() * 20); // 35–54 km/h
+// Convert m/s (from Geolocation API) to km/h
+function msToKmh(ms) {
+  return ms != null && ms >= 0 ? Math.round(ms * 3.6) : 0;
 }
 
 export default function DriverTrackingPage() {
@@ -20,31 +15,34 @@ export default function DriverTrackingPage() {
   const [searchParams] = useSearchParams();
   const busId = searchParams.get('busId') || '';
 
-  const [busData,        setBusData]        = useState(null);
-  const [routeData,      setRouteData]      = useState(null);   // { name, stops[] }
-  const [currentCoords,  setCurrentCoords]  = useState(null);
-  const [currentSpeed,   setCurrentSpeed]   = useState(0);
-  const [updateCount,    setUpdateCount]    = useState(0);
-  const [distanceCovered,setDistanceCovered]= useState(0);
-  const [stopping,       setStopping]       = useState(false);
-  const [routePointText, setRoutePointText] = useState('—');
-  const [arrived,        setArrived]        = useState(false);
+  const [busData,         setBusData]         = useState(null);
+  const [routeData,       setRouteData]       = useState(null);   // { name, stops[] }
+  const [currentCoords,   setCurrentCoords]   = useState(null);
+  const [currentSpeed,    setCurrentSpeed]    = useState(0);
+  const [updateCount,     setUpdateCount]     = useState(0);
+  const [distanceCovered, setDistanceCovered] = useState(0);
+  const [stopping,        setStopping]        = useState(false);
+  const [gpsStatus,       setGpsStatus]       = useState('waiting'); // 'waiting' | 'active' | 'denied' | 'unavailable'
+  const [closestStopIdx,  setClosestStopIdx]  = useState(0);
+  const [arrived,         setArrived]         = useState(false);
 
-  const intervalRef        = useRef(null);
-  const routeIndexRef      = useRef(0);
-  const subStepRef         = useRef(0);    // 0-2 within each stop segment (1/3, 2/3, 3/3)
-  const distanceCoveredRef = useRef(0);
-  const prevCoordsRef      = useRef(null);
-  const startTimeRef       = useRef(new Date());
-  const stopsRef           = useRef([]);   // live ref to stops array
-  const gpsRecordingRef    = useRef([]);   // raw GPS trace from device
-  const gpsWatchIdRef      = useRef(null); // geolocation watch handle
-  const routeIdRef         = useRef(null); // saved for GPS baking on trip end
+  const gpsWatchIdRef      = useRef(null);
+  const distanceCoveredRef  = useRef(0);
+  const prevCoordsRef       = useRef(null);
+  const startTimeRef        = useRef(new Date());
+  const updateCountRef      = useRef(0);
+  const stopsRef            = useRef([]);
+  const gpsRecordingRef     = useRef([]);
+  const routeIdRef          = useRef(null);
+  // Monotonic stop index — can only advance forward, never jump backward.
+  // Prevents GPS jitter or a bad initial fix from skipping the bus to the end.
+  const closestStopIdxRef   = useRef(0);
 
-  // ── Load bus + route data, then start simulation ───────────────────────────
+  // ── Load bus + route data, then start real GPS watch ──────────────────────
   useEffect(() => {
     if (!busId) return;
     let mounted = true;
+    const mountedCleanups = []; // collects extra teardown fns (e.g. beforeunload)
 
     async function init() {
       // 1. Fetch bus doc
@@ -62,90 +60,144 @@ export default function DriverTrackingPage() {
 
       setRouteData({ name: route.name, stops });
       stopsRef.current = stops;
+      routeIdRef.current = route.id;
 
-      // Initialise position at first stop
-      const first = stops[0];
-      setCurrentCoords(first);
-      prevCoordsRef.current = first;
-      setRoutePointText(`1/${stops.length}`);
-
-      // 3. Mark trip active
-      await startTrip(busId);
+      // 3. Mark trip active only if not already active (prevents false re-notification
+      //    when driver navigates back to this page after a brief interruption)
+      if (bus.status !== 'active') {
+        await startTrip(busId);
+      }
       if (!mounted) return;
 
-      // 4. Record real device GPS for route baking (works silently alongside simulation)
-      routeIdRef.current = route.id;
-      if (navigator.geolocation) {
+      // 4. Register a beforeunload handler so navigating away / closing the tab
+      //    automatically resets the bus to idle in Firestore
+      const handleUnload = () => { stopTrip(busId).catch(() => {}); };
+      window.addEventListener('beforeunload', handleUnload);
+      // Store for cleanup
+      mountedCleanups.push(() => window.removeEventListener('beforeunload', handleUnload));
+
+      // ── Helper: start a GPS watch with given options ────────────────────────
+      const startGpsWatch = (highAccuracy) => {
+        if (!mounted) return;
+        if (gpsWatchIdRef.current !== null) {
+          navigator.geolocation.clearWatch(gpsWatchIdRef.current);
+        }
         gpsWatchIdRef.current = navigator.geolocation.watchPosition(
           (pos) => {
-            gpsRecordingRef.current.push({
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude,
-            });
+            if (!mounted) return;
+
+            const lat       = pos.coords.latitude;
+            const lng       = pos.coords.longitude;
+            const accuracy  = pos.coords.accuracy;  // metres
+            const speed     = msToKmh(pos.coords.speed);
+
+            // Skip wildly inaccurate fixes (> 2 km) on first update
+            // to avoid an IP-based location triggering a wrong stop or arrival
+            if (updateCountRef.current === 0 && accuracy > 2000) {
+              console.warn(`GPS accuracy too low (${Math.round(accuracy)} m) — skipping first fix`);
+              return;
+            }
+
+            // Record raw GPS trace for route baking
+            gpsRecordingRef.current.push({ lat, lng });
+
+            // Accumulate distance from previous fix
+            if (prevCoordsRef.current) {
+              const seg = haversineDistance(
+                prevCoordsRef.current.lat, prevCoordsRef.current.lng,
+                lat, lng
+              );
+              // Only count movement that's plausible (< 5 km per fix — rules out GPS jumps)
+              if (seg < 5) {
+                distanceCoveredRef.current += seg;
+                setDistanceCovered(distanceCoveredRef.current);
+              }
+            }
+            prevCoordsRef.current = { lat, lng };
+
+            // Update UI state
+            setCurrentCoords({ lat, lng });
+            setCurrentSpeed(speed);
+            updateCountRef.current += 1;
+            setUpdateCount(updateCountRef.current);
+            setGpsStatus('active');
+
+            // ── Route-proximity guard ─────────────────────────────────────────
+            // If the driver's device is more than 50 km from the route's first
+            // stop (e.g. testing from Trivandrum while the route is in Madurai),
+            // skip route-progress and arrival detection entirely.
+            // Progress stays pinned at stop 0 — correct when actually on the route.
+            const s          = stopsRef.current;
+            const firstStop  = s[0];
+            const distFromRouteStart = haversineDistance(lat, lng, firstStop.lat, firstStop.lng);
+            const onRoute = distFromRouteStart <= 50; // within 50 km of route origin
+
+            if (onRoute) {
+              // ── Monotonic closest-stop detection ────────────────────────────
+              // Search only forward from current index — can NEVER jump backward.
+              let minDist = Infinity;
+              let minIdx  = closestStopIdxRef.current;
+              for (let i = closestStopIdxRef.current; i < s.length; i++) {
+                const d = haversineDistance(lat, lng, s[i].lat, s[i].lng);
+                if (d < minDist) { minDist = d; minIdx = i; }
+              }
+              closestStopIdxRef.current = minIdx;
+              setClosestStopIdx(minIdx);
+
+              // ── Arrival detection ──────────────────────────────────────────
+              // Require ≥5 GPS updates AND ≥500 m covered before declaring
+              // arrival — guards against any remaining inaccurate fixes.
+              const lastStop  = s[s.length - 1];
+              const distToEnd = haversineDistance(lat, lng, lastStop.lat, lastStop.lng);
+              if (
+                updateCountRef.current >= 5 &&
+                distanceCoveredRef.current >= 0.5 &&
+                distToEnd < 0.3
+              ) {
+                setArrived(true);
+              }
+            }
+
+            // Write real coordinates to Firestore — passengers see this instantly
+            updateBusLocation(busId, lat, lng, speed).catch(() => {});
           },
-          null,
-          { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 },
+          (err) => {
+            if (!mounted) return;
+            console.error('GPS error:', err);
+            if (err.code === err.PERMISSION_DENIED) {
+              setGpsStatus('denied');
+            } else if (err.code === err.TIMEOUT && highAccuracy) {
+              // High-accuracy timed out (common on desktop) — retry with coarse location
+              console.warn('High-accuracy GPS timed out — retrying with coarse location…');
+              startGpsWatch(false);
+            } else {
+              setGpsStatus('unavailable');
+            }
+          },
+          {
+            enableHighAccuracy: highAccuracy,
+            maximumAge: highAccuracy ? 5000 : 10000,
+            timeout: highAccuracy ? 60000 : 30000, // 60 s for high, 30 s for coarse
+          }
         );
+      };
+
+      // Guard: browser must support geolocation
+      if (!navigator.geolocation) {
+        setGpsStatus('unavailable');
+        return;
       }
 
-      // 5. Wait 2s then start GPS simulation
-      await new Promise((r) => setTimeout(r, 2000));
-      if (!mounted) return;
-
-      // Fires every 2s. Three firings = one full stop-to-stop segment (6s total).
-      // Sub-step 1 → bus at 1/3 of the way to next stop
-      // Sub-step 2 → bus at 2/3 of the way
-      // Sub-step 3 → bus arrives at next stop; index advances
-      intervalRef.current = setInterval(async () => {
-        const s       = stopsRef.current;
-        const fromIdx = routeIndexRef.current;
-        const toIdx   = fromIdx + 1;
-
-        if (toIdx >= s.length) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-          const last = s[s.length - 1];
-          await updateBusLocation(busId, last.lat, last.lng, 0);
-          if (mounted) setArrived(true);
-          return;
-        }
-
-        subStepRef.current += 1;
-        const t    = subStepRef.current / 3;   // 1/3 · 2/3 · 1
-        const from = s[fromIdx];
-        const to   = s[toIdx];
-        const pos  = {
-          lat: from.lat + (to.lat - from.lat) * t,
-          lng: from.lng + (to.lng - from.lng) * t,
-        };
-        const speed = randomSpeed(bus.busType);
-
-        setCurrentCoords(pos);
-        setCurrentSpeed(speed);
-        setUpdateCount((c) => c + 1);
-        await updateBusLocation(busId, pos.lat, pos.lng, speed);
-
-        if (subStepRef.current >= 3) {
-          // Arrived at next stop — reset sub-step, advance stop index
-          subStepRef.current    = 0;
-          routeIndexRef.current = toIdx;
-
-          const segDist = haversineDistance(from.lat, from.lng, to.lat, to.lng);
-          distanceCoveredRef.current += segDist;
-          prevCoordsRef.current = to;
-
-          setDistanceCovered(distanceCoveredRef.current);
-          setRoutePointText(`${toIdx + 1}/${s.length}`);
-        }
-      }, UPDATE_INTERVAL_MS);
+      startGpsWatch(true); // start with high accuracy; falls back automatically
     }
 
     init();
     return () => {
       mounted = false;
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      mountedCleanups.forEach((fn) => fn());
       if (gpsWatchIdRef.current !== null) {
         navigator.geolocation.clearWatch(gpsWatchIdRef.current);
+        gpsWatchIdRef.current = null;
       }
     };
   }, [busId]);
@@ -153,14 +205,14 @@ export default function DriverTrackingPage() {
   // ── Stop trip ──────────────────────────────────────────────────────────────
   const handleStopTrip = async () => {
     setStopping(true);
-    clearInterval(intervalRef.current);
-    intervalRef.current = null;
 
-    // Stop GPS recording and save if we captured enough real points
+    // Stop GPS watch
     if (gpsWatchIdRef.current !== null) {
       navigator.geolocation.clearWatch(gpsWatchIdRef.current);
       gpsWatchIdRef.current = null;
     }
+
+    // Save raw GPS recording if we captured enough points for route baking
     if (gpsRecordingRef.current.length >= 20 && routeIdRef.current) {
       saveRawGpsPath(routeIdRef.current, gpsRecordingRef.current).catch(() => {});
     }
@@ -175,7 +227,7 @@ export default function DriverTrackingPage() {
         driverEmail: busData?.driverEmail || '',
         startTime:   startTimeRef.current,
         distanceKm:  distanceCoveredRef.current,
-        updateCount,
+        updateCount: updateCountRef.current,
       });
     } catch (e) {
       console.warn('Could not save trip history:', e.message);
@@ -186,7 +238,7 @@ export default function DriverTrackingPage() {
 
   // ── Derived display values ─────────────────────────────────────────────────
   const stops       = routeData?.stops || [];
-  const origin      = stops[0]?.name            || '…';
+  const origin      = stops[0]?.name              || '…';
   const destination = stops[stops.length - 1]?.name || '…';
 
   return (
@@ -212,11 +264,31 @@ export default function DriverTrackingPage() {
             </span>
           )}
           <div className="gps-status" style={{ marginTop: 6, justifyContent: 'flex-end' }}>
-            <span className="gps-dot" />
-            GPS: ON
+            <span
+              className="gps-dot"
+              style={{ background: gpsStatus === 'active' ? '#69f0ae' : gpsStatus === 'waiting' ? '#f9a825' : '#f44336' }}
+            />
+            {gpsStatus === 'active'      ? 'GPS: Live'
+              : gpsStatus === 'waiting'  ? 'GPS: Waiting…'
+              : gpsStatus === 'denied'   ? 'GPS: Denied'
+              : 'GPS: Unavailable'}
           </div>
         </div>
       </div>
+
+      {/* GPS permission denied / unavailable banner */}
+      {(gpsStatus === 'denied' || gpsStatus === 'unavailable') && (
+        <div style={{ margin: '0 16px 8px', background: 'linear-gradient(135deg,#7f1d1d,#991b1b)', borderRadius: 12, padding: '14px 18px', border: '1.5px solid #ef4444' }}>
+          <p style={{ fontWeight: 800, fontSize: 15, color: '#fca5a5', marginBottom: 4 }}>
+            {gpsStatus === 'denied' ? '🚫 GPS Permission Denied' : '📡 GPS Unavailable'}
+          </p>
+          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
+            {gpsStatus === 'denied'
+              ? 'Allow location access in your browser settings, then reload the page to start real-time tracking.'
+              : 'Your device does not support GPS or location could not be determined. Try again outdoors.'}
+          </p>
+        </div>
+      )}
 
       {/* Destination arrived banner */}
       {arrived && (
@@ -244,8 +316,12 @@ export default function DriverTrackingPage() {
           <div className="stat-label">GPS Updates Sent</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value" style={{ fontSize: 18 }}>{routePointText}</div>
-          <div className="stat-label">Stop Point</div>
+          <div className="stat-value" style={{ fontSize: 14 }}>
+            {currentCoords
+              ? `${currentCoords.lat.toFixed(4)}, ${currentCoords.lng.toFixed(4)}`
+              : '—'}
+          </div>
+          <div className="stat-label">Coordinates</div>
         </div>
       </div>
 
@@ -270,20 +346,20 @@ export default function DriverTrackingPage() {
             <div>
               <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>Current Stop</p>
               <p style={{ fontWeight: 700, fontSize: 15, color: '#f9a825' }}>
-                {stops[routeIndexRef.current]?.name || '—'}
+                {stops[closestStopIdx]?.name || '—'}
               </p>
             </div>
-            {stops[routeIndexRef.current + 1] && (
+            {stops[closestStopIdx + 1] && (
               <div style={{ textAlign: 'right' }}>
                 <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>Next Stop</p>
                 <p style={{ fontWeight: 600, fontSize: 15, color: 'rgba(255,255,255,0.85)' }}>
-                  {stops[routeIndexRef.current + 1].name}
+                  {stops[closestStopIdx + 1].name}
                 </p>
               </div>
             )}
           </div>
           <p style={{ marginTop: 8, color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
-            Updates every {UPDATE_INTERVAL_MS / 1000}s · {stops.length} stops on route
+            Real GPS · updates on every device position change · {stops.length} stops
           </p>
         </div>
       )}
@@ -291,15 +367,15 @@ export default function DriverTrackingPage() {
       {/* Route stop list */}
       <div style={{ padding: '16px', margin: '0 16px', background: '#0d2a3d', borderRadius: 10, marginTop: 12 }}>
         <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
-          Route Progress ({routeIndexRef.current + 1}/{stops.length} stops)
+          Route Progress ({closestStopIdx + 1}/{stops.length} stops)
         </p>
         <div className="stop-list-scroll" style={{ position: 'relative' }}>
           {/* Vertical connector line */}
           <div style={{ position: 'absolute', left: 9, top: 10, bottom: 10, width: 2, background: 'rgba(255,255,255,0.08)', zIndex: 0 }} />
           {stops.map((stop, idx) => {
-            const isCovered = arrived ? true : idx < routeIndexRef.current;
-            const isCurrent = !arrived && idx === routeIndexRef.current;
-            const isNext    = !arrived && idx === routeIndexRef.current + 1;
+            const isCovered = arrived ? true : idx < closestStopIdx;
+            const isCurrent = !arrived && idx === closestStopIdx;
+            const isNext    = !arrived && idx === closestStopIdx + 1;
             return (
               <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: idx < stops.length - 1 ? 12 : 0, position: 'relative', zIndex: 1 }}>
                 {isCovered ? (

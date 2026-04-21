@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -13,9 +13,13 @@ export default function LiveTrackingPage() {
   const busId = searchParams.get('busId') || '';
 
   const { location, loading: locLoading } = useBusLocation(busId);
-  const [busData, setBusData]   = useState(null);
+  const [busData, setBusData]     = useState(null);
   const [routeData, setRouteData] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
+
+  // ── Trip-start notification ──────────────────────────────────────────────
+  const [tripNotification, setTripNotification] = useState(null); // { busNumber, routeName }
+  const seenTripStartRef = useRef(null); // tracks the last tripStartedAt we've seen to avoid re-firing
 
   useEffect(() => {
     if (!busId) return;
@@ -62,9 +66,39 @@ export default function LiveTrackingPage() {
 
   const isLive = location?.tripStatus === 'active';
 
+  // Detect idle → active transition: fire toast only when tripStartedAt changes
+  useEffect(() => {
+    if (!location?.tripStartedAt) return;
+    const key = location.tripStartedAt?.seconds ?? String(location.tripStartedAt);
+    // Skip on first render / if we've already shown this notification
+    if (seenTripStartRef.current === null) {
+      seenTripStartRef.current = key;
+      return;
+    }
+    if (seenTripStartRef.current !== key && location.tripStatus === 'active') {
+      seenTripStartRef.current = key;
+      setTripNotification({
+        busNumber: busData?.busNumber || busId,
+        routeName: routeData?.name || '',
+      });
+      // Auto-dismiss after 7 seconds
+      setTimeout(() => setTripNotification(null), 7000);
+    }
+  }, [location?.tripStartedAt, location?.tripStatus, busData, routeData, busId]);
+
+  // ── Route-proximity guard ─────────────────────────────────────────
+  // If the bus is more than 50 km from its origin, pin progress to stop 0.
+  // This prevents testing from Trivandrum (200km away) from showing
+  // the bus at destination (Madurai).
+  const firstStop          = routeData?.stops?.[0];
+  const distFromRouteStart = (location && firstStop)
+    ? haversineDistance(location.lat, location.lng, firstStop.lat, firstStop.lng)
+    : Infinity;
+  const onRoute = distFromRouteStart <= 50;
+
   // Find closest stop to current bus position
   let closestStopIdx = 0;
-  if (location && routeData?.stops?.length) {
+  if (onRoute && location && routeData?.stops?.length) {
     let minDist = Infinity;
     routeData.stops.forEach((stop, i) => {
       const d = haversineDistance(location.lat, location.lng, stop.lat, stop.lng);
@@ -72,7 +106,7 @@ export default function LiveTrackingPage() {
     });
   }
   const totalStops      = routeData?.stops?.length ?? 0;
-  const isAtDestination = totalStops > 0 && closestStopIdx === totalStops - 1;
+  const isAtDestination = onRoute && totalStops > 0 && closestStopIdx === totalStops - 1;
   const isCompleted     = !isLive && isAtDestination;
   const nextStop        = isAtDestination ? null : (routeData?.stops?.[closestStopIdx + 1] ?? null);
   const etaToNext       = nextStop && location
@@ -101,6 +135,47 @@ export default function LiveTrackingPage() {
 
   return (
     <div className="tracking-layout">
+
+      {/* ── Trip-Start Notification Toast ── */}
+      {tripNotification && (
+        <div style={{
+          position: 'fixed',
+          top: 16,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
+          width: 'calc(100% - 32px)',
+          maxWidth: 420,
+          background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)',
+          border: '1.5px solid #34d399',
+          borderRadius: 16,
+          padding: '14px 18px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 12,
+          animation: 'slideDown 0.3s ease',
+        }}>
+          <span style={{ fontSize: 26, flexShrink: 0 }}>🚌</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontWeight: 800, fontSize: 15, color: '#d1fae5', marginBottom: 2 }}>
+              Bus {tripNotification.busNumber} has started!
+            </p>
+            {tripNotification.routeName && (
+              <p style={{ fontSize: 12, color: 'rgba(209,250,229,0.7)', lineHeight: 1.4 }}>
+                {tripNotification.routeName}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => setTripNotification(null)}
+            aria-label="Dismiss notification"
+            style={{ background: 'none', border: 'none', color: '#6ee7b7', fontSize: 18, cursor: 'pointer', padding: 2, lineHeight: 1, flexShrink: 0 }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* ── Header ── */}
       <header className="app-header">

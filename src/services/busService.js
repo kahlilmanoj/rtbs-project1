@@ -425,7 +425,7 @@ export async function startTrip(busId) {
   });
   await setDoc(
     doc(db, 'busLocations', busId),
-    { tripStatus: 'active' },
+    { tripStatus: 'active', tripStartedAt: serverTimestamp() },
     { merge: true }
   );
 }

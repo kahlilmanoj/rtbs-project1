@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getDocs, collection, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
-import { ensureDemoData, seedDemoData, getTripHistory, clearTripHistory, clearRoutePolylineCache, addCustomRoute, removeBus } from '../services/busService';
+import { ensureDemoData, seedDemoData, getTripHistory, clearTripHistory, clearRoutePolylineCache, addCustomRoute, removeBus, stopTrip } from '../services/busService';
 import { STOP_DB } from '../data/busStops';
 
 // Flat searchable list: base stops + every variant as a separate entry
@@ -12,10 +12,10 @@ const ALL_STOPS = Object.values(STOP_DB).flatMap((stop) => {
   if (stop.variants) {
     Object.entries(stop.variants).forEach(([variant, coords]) =>
       entries.push({
-        id:   `${stop.id}_${variant}`,
+        id: `${stop.id}_${variant}`,
         name: `${stop.name} (${variant.charAt(0).toUpperCase() + variant.slice(1)})`,
-        lat:  coords.lat,
-        lng:  coords.lng,
+        lat: coords.lat,
+        lng: coords.lng,
       }),
     );
   }
@@ -29,19 +29,20 @@ export default function DriverDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
 
   // ── Dashboard state ──
-  const [buses, setBuses]   = useState([]);
+  const [buses, setBuses] = useState([]);
   const [routes, setRoutes] = useState({});
   const [loading, setLoading] = useState(true);
-  const [error, setError]   = useState('');
+  const [error, setError] = useState('');
 
   // ── History state ──
-  const [history, setHistory]         = useState([]);
+  const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [clearingHistory, setClearingHistory] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [seedMsg, setSeedMsg] = useState('');
   const [cacheMsg, setCacheMsg] = useState('');
+  const [forceStoppingBus, setForceStoppingBus] = useState(null); // busId being force-stopped
 
   // ── Editable profile fields ──
   const [driverProfile, setDriverProfile] = useState(() => {
@@ -60,11 +61,11 @@ export default function DriverDashboard() {
 
   // ── Add Route state ──
   const EMPTY_FORM = { busNumber: '', routeName: '', busType: 'College Bus', fare: '', distance: '', duration: '', schedule: '07:30 AM' };
-  const [form,           setForm]           = useState(EMPTY_FORM);
-  const [selectedStops,  setSelectedStops]  = useState([]);
-  const [stopSearch,     setStopSearch]     = useState('');
-  const [addMsg,         setAddMsg]         = useState('');
-  const [addLoading,     setAddLoading]     = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [selectedStops, setSelectedStops] = useState([]);
+  const [stopSearch, setStopSearch] = useState('');
+  const [addMsg, setAddMsg] = useState('');
+  const [addLoading, setAddLoading] = useState(false);
 
   // ── Fetch buses on mount ──
   useEffect(() => {
@@ -72,7 +73,7 @@ export default function DriverDashboard() {
 
     async function fetchDriverBuses() {
       // Run ensureDemoData in background — don't block the UI on it
-      ensureDemoData().catch(() => {});
+      ensureDemoData().catch(() => { });
       try {
         const busQuery = query(
           collection(db, 'buses'),
@@ -201,13 +202,45 @@ export default function DriverDashboard() {
                   </div>
                 )}
 
-                <button
-                  className="btn btn-primary mt-16"
-                  onClick={() => handleStartTrip(bus.id)}
-                  disabled={bus.status === 'active'}
-                >
-                  {bus.status === 'active' ? '✅ Trip In Progress' : '▶ Start Trip'}
-                </button>
+                {bus.status === 'active' ? (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                    <button
+                      className="btn btn-primary"
+                      style={{ flex: 1 }}
+                      onClick={() => handleStartTrip(bus.id)}
+                    >
+                      ▶ Resume Trip
+                    </button>
+                    <button
+                      className="btn btn-secondary"
+                      style={{ flex: 1, color: '#d32f2f', borderColor: '#d32f2f' }}
+                      disabled={forceStoppingBus === bus.id}
+                      onClick={async () => {
+                        setForceStoppingBus(bus.id);
+                        try {
+                          await stopTrip(bus.id);
+                          // Refresh bus list
+                          setBuses((prev) =>
+                            prev.map((b) => b.id === bus.id ? { ...b, status: 'idle' } : b)
+                          );
+                        } catch (e) {
+                          alert('Force stop failed: ' + e.message);
+                        } finally {
+                          setForceStoppingBus(null);
+                        }
+                      }}
+                    >
+                      {forceStoppingBus === bus.id ? 'Stopping…' : '⏹ Stop Trip'}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="btn btn-primary mt-16"
+                    onClick={() => handleStartTrip(bus.id)}
+                  >
+                    ▶ Start Trip
+                  </button>
+                )}
               </div>
             );
           })
@@ -260,8 +293,8 @@ export default function DriverDashboard() {
               const startDate = trip.startTime instanceof Date
                 ? trip.startTime
                 : trip.startTime?.toDate
-                ? trip.startTime.toDate()
-                : null;
+                  ? trip.startTime.toDate()
+                  : null;
 
               const durationMin = startDate && endDate
                 ? Math.round((endDate - startDate) / 60000)
@@ -523,9 +556,9 @@ export default function DriverDashboard() {
   const renderAddRoute = () => {
     const filteredStops = stopSearch.trim().length > 0
       ? ALL_STOPS.filter((s) =>
-          s.name.toLowerCase().includes(stopSearch.toLowerCase()) &&
-          !selectedStops.find((sel) => sel.id === s.id),
-        ).slice(0, 8)
+        s.name.toLowerCase().includes(stopSearch.toLowerCase()) &&
+        !selectedStops.find((sel) => sel.id === s.id),
+      ).slice(0, 8)
       : [];
 
     const moveStop = (idx, dir) => {
@@ -537,10 +570,10 @@ export default function DriverDashboard() {
     };
 
     const handleSubmit = async () => {
-      if (!form.busNumber.trim())         return setAddMsg('❌ Enter a bus number.');
-      if (!form.routeName.trim())         return setAddMsg('❌ Enter a route name.');
-      if (!form.fare || !form.distance)   return setAddMsg('❌ Enter fare and distance.');
-      if (selectedStops.length < 2)       return setAddMsg('❌ Add at least 2 stops.');
+      if (!form.busNumber.trim()) return setAddMsg('❌ Enter a bus number.');
+      if (!form.routeName.trim()) return setAddMsg('❌ Enter a route name.');
+      if (!form.fare || !form.distance) return setAddMsg('❌ Enter fare and distance.');
+      if (selectedStops.length < 2) return setAddMsg('❌ Add at least 2 stops.');
 
       setAddLoading(true);
       setAddMsg('');
@@ -599,7 +632,7 @@ export default function DriverDashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
               <label className="input-label">Fare (₹)</label>
-              <input className="input-field" type="number" value={form.fare}     onChange={(e) => setForm((f) => ({ ...f, fare: e.target.value }))}     placeholder="30" />
+              <input className="input-field" type="number" value={form.fare} onChange={(e) => setForm((f) => ({ ...f, fare: e.target.value }))} placeholder="30" />
             </div>
             <div>
               <label className="input-label">Distance (km)</label>
@@ -658,9 +691,9 @@ export default function DriverDashboard() {
                     {i + 1}
                   </span>
                   <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{stop.name}</span>
-                  <button type="button" onClick={() => moveStop(i, -1)} disabled={i === 0}                         style={{ background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', opacity: i === 0 ? 0.3 : 1, fontSize: 14, padding: '2px 4px' }}>↑</button>
-                  <button type="button" onClick={() => moveStop(i,  1)} disabled={i === selectedStops.length - 1} style={{ background: 'none', border: 'none', cursor: i === selectedStops.length - 1 ? 'default' : 'pointer', opacity: i === selectedStops.length - 1 ? 0.3 : 1, fontSize: 14, padding: '2px 4px' }}>↓</button>
-                  <button type="button" onClick={() => setSelectedStops((p) => p.filter((_, j) => j !== i))}      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: 16, padding: '2px 4px', lineHeight: 1 }}>×</button>
+                  <button type="button" onClick={() => moveStop(i, -1)} disabled={i === 0} style={{ background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', opacity: i === 0 ? 0.3 : 1, fontSize: 14, padding: '2px 4px' }}>↑</button>
+                  <button type="button" onClick={() => moveStop(i, 1)} disabled={i === selectedStops.length - 1} style={{ background: 'none', border: 'none', cursor: i === selectedStops.length - 1 ? 'default' : 'pointer', opacity: i === selectedStops.length - 1 ? 0.3 : 1, fontSize: 14, padding: '2px 4px' }}>↓</button>
+                  <button type="button" onClick={() => setSelectedStops((p) => p.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: 16, padding: '2px 4px', lineHeight: 1 }}>×</button>
                 </div>
               ))}
             </div>
@@ -683,9 +716,9 @@ export default function DriverDashboard() {
   /* ── Render ────────────────────────────────────────────────────────────── */
   const tabContent = {
     dashboard: renderDashboard,
-    history:   renderHistory,
-    add:       renderAddRoute,
-    profile:   renderProfile,
+    history: renderHistory,
+    add: renderAddRoute,
+    profile: renderProfile,
   };
 
   return (
@@ -756,9 +789,9 @@ export default function DriverDashboard() {
       <nav className="bottom-nav">
         {[
           { key: 'dashboard', icon: '🚌', label: 'Dashboard' },
-          { key: 'history',   icon: '📋', label: 'History'   },
-          { key: 'add',       icon: '➕', label: 'Add Route'  },
-          { key: 'profile',   icon: '👤', label: 'Profile'   },
+          { key: 'history', icon: '📋', label: 'History' },
+          { key: 'add', icon: '➕', label: 'Add Route' },
+          { key: 'profile', icon: '👤', label: 'Profile' },
         ].map((tab) => (
           <button
             key={tab.key}

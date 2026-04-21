@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import { getBusesByStops } from '../services/busService';
 import BusCard from '../components/BusCard';
 
@@ -14,7 +16,11 @@ export default function BusListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Fetch matching buses once
+  // Real-time bus status map: busId → { tripStatus, speed }
+  // Updated via Firestore onSnapshot so passengers see LIVE badges instantly
+  const [liveStatus, setLiveStatus] = useState({});
+
+  // Fetch matching buses once (one-time query for the route match)
   useEffect(() => {
     let cancelled = false;
 
@@ -38,10 +44,42 @@ export default function BusListPage() {
       setLoading(false);
     }
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [fromStop, toStop]);
+
+  // Subscribe to busLocations for all found buses to get real-time status
+  useEffect(() => {
+    if (buses.length === 0) return;
+
+    const busIds = buses.map((b) => b.id);
+
+    // Firestore 'in' queries are limited to 10 items — chunk if needed
+    const chunks = [];
+    for (let i = 0; i < busIds.length; i += 10) {
+      chunks.push(busIds.slice(i, i + 10));
+    }
+
+    const unsubscribes = chunks.map((chunk) => {
+      const q = query(
+        collection(db, 'busLocations'),
+        where('__name__', 'in', chunk)
+      );
+      return onSnapshot(q, (snap) => {
+        setLiveStatus((prev) => {
+          const updated = { ...prev };
+          snap.docs.forEach((d) => {
+            updated[d.id] = {
+              tripStatus: d.data().tripStatus,
+              speed: d.data().speed,
+            };
+          });
+          return updated;
+        });
+      });
+    });
+
+    return () => unsubscribes.forEach((u) => u());
+  }, [buses]);
 
   const handleTrack = (busId) => {
     navigate(`/live-tracking?busId=${busId}`);
@@ -76,6 +114,13 @@ export default function BusListPage() {
           </button>
           Available Buses
         </div>
+        {/* Live indicator if any bus is active */}
+        {Object.values(liveStatus).some((s) => s.tripStatus === 'active') && (
+          <span className="badge-live">
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} />
+            LIVE
+          </span>
+        )}
       </header>
 
       <div className="page-content">
@@ -111,18 +156,38 @@ export default function BusListPage() {
               {buses.length} bus{buses.length !== 1 ? 'es' : ''} found
             </p>
 
-            {buses.map((bus) => (
-              <BusCard
-                key={bus.id}
-                busNumber={bus.busNumber}
-                busType={bus.busType}
-                fare={bus.fare}
-                routeDistance={bus.distance}
-                duration={bus.duration}
-                status={bus.status}
-                onTrack={() => handleTrack(bus.id)}
-              />
-            ))}
+            {buses.map((bus) => {
+              const live = liveStatus[bus.id];
+              const isLive = live?.tripStatus === 'active';
+              return (
+                <div key={bus.id} style={{ position: 'relative' }}>
+                  {/* LIVE overlay badge */}
+                  {isLive && (
+                    <span
+                      className="badge-live"
+                      style={{
+                        position: 'absolute',
+                        top: 12, right: 12,
+                        zIndex: 2,
+                        fontSize: 10,
+                      }}
+                    >
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} />
+                      LIVE
+                    </span>
+                  )}
+                  <BusCard
+                    busNumber={bus.busNumber}
+                    busType={bus.busType}
+                    fare={bus.fare}
+                    routeDistance={bus.distance}
+                    duration={bus.duration}
+                    status={isLive ? 'active' : bus.status}
+                    onTrack={() => handleTrack(bus.id)}
+                  />
+                </div>
+              );
+            })}
           </>
         )}
       </div>
